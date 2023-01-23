@@ -1,0 +1,210 @@
+---
+title: "Analise Cofinanciamento"
+description: 
+  - name: Nora Jones 
+    url: https://example.com/norajones
+    affiliation: Spacely Sprockets
+    affiliation_url: https://example.com/spacelysprokets
+date: "`r Sys.Date()`"
+output: distill::distill_article
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(knitr)
+library(skimr)
+library(bslib)
+library(thematic)
+library(ggplot2)
+library(ggpubr)
+library(ggridges)
+library(GGally)
+library(scatterplot3d)
+library(patchwork)
+library(Hmisc)
+library(gghighlight)
+library(kableExtra)
+library(formattable)
+library(cowplot)
+library(palmerpenguins)
+library(forcats)
+library(ggforce)
+library(tidymodels)
+
+```
+
+
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+#Base de dados: Cofinanciamento
+cofinanciamento <-readxl::read_xlsx("dataset/Cofinanciamento/baseCofGeral.xlsx",
+                                     sheet = "RacioPorConselhoNUTSIII") |>
+  janitor::clean_names() |>
+  dplyr::filter(cof_total > 0) |> 
+  dplyr::mutate(dico = as.numeric(dico))
+
+cofinanciamentoTidy <- readxl::read_xlsx("dataset/Cofinanciamento/cofttTidy.xlsx") |> janitor::clean_names() |>
+  dplyr::mutate(dico = as.numeric(dico)) |> 
+  dplyr::filter(nutsiii_dsg != "Algarve") |>
+  dplyr::select(nutsiii_dsg, municipio, fonte, valores)
+
+
+grafCofTidry <-  cofinanciamentoTidy |>
+  dplyr::filter(fonte != "COF_NUTSIII+MUN") |>
+  dplyr::group_by(nutsiii_dsg, fonte) |>
+  dplyr::summarise(
+    TotalCof = sum(valores)
+  )
+
+```
+
+### Parte 1: Análise Exploratória do Cofinanciamento (Municipal, NUTSIII e Total)
+
+O valor total do Cofinanciamento foi de €99.392.404,70, sendo €46.981.367,16 destinado diretamente para 131 Conselhos Municipais e, €52.411.037,54 para 13 Concelhos Intermunicpais, que representam 239 municípios. Vila Nova de Gaia foi o Concelho que recebeu o maior valor de Cofinanciamento diretamente para a Câmara Municpal (€ 1.538.102,74), enquanto Estremoz, o que menos recebeu (€ 77.350,00). Dos recursos destinados ao Concelhos Intermunicipais, Tãmega e Sousa foi quem mais recebeu (€ 6.692.920,14), enquanto Alto Tâmega a que menos recebeu (€ 178.500,00). Em média, o valor destinado diretamente aos Concelhos Municipais foi de € 400.084,26, enquanto a média dos recursos intermunicipais é de €196.574,76. 
+
+A tabela, a seguir, apresenta estatísticas gerais dos valores dos Cofinanciamentos para os municípios, NUTSIII e o Valor Total, sendo este último, a soma dos valores repassados diretamtente aos Concelhos e o racio calculado a partir dos valores destinados às comunidades intermunicipais e o número de Concelho desta NUTSIII.
+
+### Estatísticas básicas
+
+```{r echo=FALSE, warning=FALSE,message=FALSE, fig.show='hold', out.width= "50%"}
+
+skim(cofinanciamento[4:6]) 
+
+cofinanciamentoTidy |> 
+ # dplyr::select(fonte, valores) |> 
+  ggplot(aes(x = valores, fill = fonte)) +
+  geom_density(color = 'white', alpha=0.3) +
+  theme_bw() +
+  labs(x = "Cofinanciamento",
+       y = "Ciclos Escolares") 
+
+```
+
+#### Cofinanciamento: Municipal, NUTSIII e Total.
+
+Os gráficos, abaixo, descrevem os Cofinanciamento: Municipal, NUTSIII e Total, apresentado de uma forma que possibilita a  comparação pareada de dados multivariados. A matriz de gráficos possibilita duas comparações diferentes de cada par de colunas e exibe a densidade da respectiva variável ao longo da diagonal.
+
+```{r echo=FALSE, fig.show='hold', out.width= "50%", warning=FALSE, message=FALSE}
+
+
+
+## Barras 1 - Municipal
+grafCofTidry |> dplyr::filter(TotalCof >0 & fonte == "COF_MUN") |>
+  tidyr::drop_na(fonte) |>
+  ggplot(aes(x=forcats::fct_reorder(nutsiii_dsg, TotalCof), y=TotalCof, fill=fonte)) +
+  geom_col(position = "stack") +
+  coord_flip() +
+  scale_y_continuous(labels = scales::dollar)  +
+  labs(
+    title = "Cofinanciamento Municipal",
+    subtitle = "Valores repassados diretamento aos municípios",
+    x = "NUTS III",
+    y = "Cofinanciamento",
+    color = "Verbas") +
+  theme_bw()
+
+## Barras 2 - NUTS III
+grafCofTidry |> 
+  dplyr::filter(TotalCof > 0 & fonte == "COF_NUTSIII") |>
+  tidyr::drop_na(fonte) |>
+  ggplot(aes(x=forcats::fct_reorder(nutsiii_dsg, TotalCof), 
+             y = TotalCof, 
+             fill = fonte)) +
+  geom_col(position = "stack") +
+  coord_flip() +
+  scale_y_continuous(labels = scales::dollar)  +
+  labs(
+    title = "Cofinanciamento NUTSIII",
+    subtitle = "Valores repassados diretamento às NUTSIII",
+    x = "NUTS III",
+    y = "Cofinanciamento",
+    color = "Verbas") +
+  theme_bw()
+
+
+grafCofTidry |>
+  ggplot(aes(x=forcats::fct_reorder(nutsiii_dsg, TotalCof), y=TotalCof, fill=fonte)) +
+  geom_col(position = "stack") +
+  coord_flip() +
+  scale_y_continuous(labels = scales::dollar)  +
+  labs(
+    title = "Cofinanciamento Total",
+    subtitle = "Municipal e NUTSIII",
+    x = "NUTS III",
+    y = "Cofinanciamento",
+    color = "Verbas") +
+  theme_bw()
+```
+
+#### Histograma/Densidade
+
+```{r echo=FALSE, fig.show='hold', out.width= "50%", warning=FALSE, message=FALSE}
+# cofinanciamentoTidy |> 
+#   ggplot(aes(x = valores, fill = fonte)) +
+#   geom_histogram(color = 'white', alpha=0.4) +
+#   theme_bw() +
+#   labs(x = "Cofinanciamento",
+#        y = "Ciclos Escolares") 
+
+
+```
+
+## Análise de Outliers
+
+```{r  fig.show='hold', out.width= "50%", warning=FALSE, message=FALSE}
+
+cofResTt <-  cofinanciamento |>
+  dplyr::mutate(
+    desvio = cof_total-mean(cof_total),
+    z_score_cof = (cof_total-mean(cof_total))/sd(cof_total),
+    e_outlier_cof = dplyr::if_else(abs(z_score_cof) > 2, "É outlier", "Não é outlier"),
+    quantis = dplyr::if_else(cof_total < quantile(cof_total, 0.25), "Q1",
+                             dplyr::if_else(cof_total > quantile(cof_total, 0.75), "Q3", "IIQ"))
+  )
+
+ofResMun <-  cofinanciamento |>
+  dplyr::mutate(
+    desvio = cof_mun-mean(cof_mun),
+    z_score_cof = (cof_mun-mean(cof_total))/sd(cof_mun),
+    e_outlier_cof = dplyr::if_else(abs(z_score_cof) > 2, "É outlier", "Não é outlier"),
+    quantis = dplyr::if_else(cof_total < 30018, "Q1",
+                             dplyr::if_else(cof_mun > 470541, "Q3", "IIQ"))
+  )
+
+ggplot(cofResTt, aes(x = cof_total, y = desvio, colour = quantis)) +
+  geom_point() +
+  labs(
+    title = "Análise de Outlier - Cofinanciamento Total",
+    subtitle = "Concelhos receberam valores menores que Q1",
+    x = "Cofinanciamento",
+    y = "Resíduos",
+    color = "Verbas") +
+  theme_bw() +
+  facet_zoom(x = quantis == "Q1", split = TRUE) +
+  gghighlight::gghighlight(2, cof_total < 262000,
+                           label_key = concelho_dsg,
+                           label_params = list(size = 4, fill = "grey"))
+
+ggplot(cofResTt, aes(x = cof_total, y = desvio, colour = quantis)) +
+  geom_point() +
+  labs(
+    title = "Análise de Outlier - Cofinanciamento Total",
+    subtitle = "Concelhos receberam valores maiores que Q3",
+    x = "Cofinanciamento",
+    y = "Resíduos",
+    color = "Verbas") +
+  theme_bw() +
+  facet_zoom(x = quantis == "Q3", split = TRUE) +
+  gghighlight::gghighlight(2, cof_total > 1000000,
+                           label_key = concelho_dsg,
+                           label_params = list(size = 4, fill = "grey"))
+```
+
+
+
+
+
+
+
+
+

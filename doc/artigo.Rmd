@@ -1,0 +1,104 @@
+---
+title: "Artigo Machine Learning"
+author: "GETIN"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidymodels)
+
+# 1) Bases  ------------------------------------------------
+
+# A importar a base com os valores dos cofinanciamentos: NUTSIII/Muncicípio e Município
+cofinanciamento <- readxl::read_excel("../dataset/Cofinanciamento/baseCofGeral.xlsx",
+                                      sheet = "baseTidy") |>
+  janitor::clean_names() 
+
+# A importar a base com os dados a serem usados na modelação: 2017/2018 a 2019/2020
+baseModelo <- readxl::read_xlsx("../dataset/Modelacao/baseModelo1.xlsx") 
+
+# cofTt <- readxl::read_excel("../data/Fundos_PIICIE_Educacao.xls",
+#                                      sheet = "gisMunNutsIII") |>
+#   janitor::clean_names()
+# 
+# base <- readxl::read_excel("../data/baseModelo1.xlsx") |>
+#   dplyr::select(6:8)
+# 
+# base$equidade <- base$equidade |>
+#   tidyr::replace_na(median(base$equidade, na.rm = T))
+# 
+# base$tx_ret <- base$tx_ret |>
+#   tidyr::replace_na(median(base$tx_ret, na.rm = T))
+# 
+# totwss <- NULL
+# 
+# for (i in 2:15) {
+#   totwss <- append(totwss, kmeans(base, centers = i)$tot.withinss)
+# }
+# 
+# plot(x=2:15, y=totwss, type = "b", xlab = "Clusters",
+#      ylab = "Total Withinss")
+# 
+# totwss <- totwss |> as_data_frame()
+# 
+# kmeans(base, 12)
+# 
+
+
+```
+
+## 1. Introdução
+
+
+
+## 2. Revisão da Literatura
+
+Para Melo Junior (2018), agrupamento ou clasterização é uma tarefa de aprendizado de máquina não supervisionado (Unsupervised Machine Learning), na qual não fornecemos nenhum treinamento para o algoritmo, e ele tenta descobrir agrupamentos dos nossos dados. Para Silva (2016), análise de agrupamentos pode ser entendida como um processo que permite descobrir relações existentes entre exemplares de um conjunto de dados descritos por um série de características (atibutos descritivos). Em geral, as análises realizadas pelos algoritmos que implementam estratégias para agrupamentos buscam por similaridades ou diferenças entre exemplares, qualificadas por medidas de distância (quanto menor for a distância entre dois exemplares, maior será a similaridade), tal que exemplares sejam associados a um mesmo grupo, e exemplares dissimilares, a grupos diferentes. Ao final da execução de um algoritmo de agrupamento, uma estrutura de grupos é formada de maneira que a similaridade intragrupos seja maximizada, e a similaridade intergrupo tenham sido minimizadas 
+
+Isto é muito interessante para detectarmos padrões de nossos dados, e pode ser utilizado para uma variedade de tarefas, por exemplo:
+
+-   Descobrir como nossos clientes se agrupam;
+
+-   Classificação de imagem;
+
+-   Descobrir padrões em observações
+
+Existem muitos algoritmos para agrupametnos, entre eles:
+
+-   k-means: Agrupa os dados tentando separar as amostras em grupos de variância igual com relação aos pontos médios, chamados de "centróides";
+
+-   DBSCAN - Density-based spatial clustering of applications with noise (Agrupamento espacial de aplicações com ruído, baseado em densidade) agrupa os pontos que estejam mais próximos, separando regiões mais densas de regiões menso densas;
+
+-   Agrupamento espectral (Spectral clustering): Trata os dados como um problema de particionamento de grafos;
+
+## 3. Metodologia
+
+```{r echo=F, include=T, message=FALSE, warning=FALSE}
+baseModelo |> 
+    ggplot(aes(equidade, tx_ret, color = ciclo, size = tt_alunos)) +
+  geom_point(alpha = 0.5)  +
+  facet_wrap(~ano) +
+  theme_bw()
+
+```
+
+### Nro de Clusters
+
+```{r}
+# plot(x=2:15, y=totwss, type = "b", xlab = "Clusters",
+#      ylab = "Total Withinss")
+```
+
+## 4. Apresentação dos Resultados
+
+## 5. Duscussão dos Resultados
+
+## 6. Conclusões/Observações finais
+
+## 7. Referências
+
+-   MELO Junior, Cleuton Sampaio de, Data Science para Profissionais Utilizando o R - Rio de Janeiro, Editora Ciência Moderna, 2018.
+
+- ilva, Leandro Augusto da - Introdução à mineração de dados: com aplicações em R / Leandro Augusto da Silva, Sarajane Marques Peres, Clodis Boscarioli. – 1. ed. – Rio de Janeiro: Elsevier, 2016.

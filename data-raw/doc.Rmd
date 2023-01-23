@@ -1,0 +1,218 @@
+---
+title: "Untitled"
+author: "GETIN"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(ggplot2)
+library(ggpubr)
+library(ggridges)
+library(GGally)
+library(scatterplot3d)
+library(patchwork)
+library(gghighlight)
+library(kableExtra)
+library(cowplot)
+library(palmerpenguins)
+
+# Dataframes ----------------------------------------------------------------------------------
+racioCof <- readxl::read_excel("../../Cofinanciamentos/01_Bases_de_dados/racioCof2.xlsx")
+racioCofPop <- readxl::read_excel("../../Cofinanciamentos/01_Bases_de_dados/racioCofPop.xlsx")
+baseracioCof <- dplyr::select(racioCof, c(2,3, 14, 15:23)) |>
+  dplyr::mutate(ano = as.numeric(stringr::str_sub(racioCof$ano, 1,4)))
+
+principaisCiclos <- dplyr::select(baseracioCof, c(ano, municipio, Cof_pe,
+                                                  Cof_cb, Cof_sec))
+
+racioTidy <- racioCof |>
+    dplyr::select(ano, municipio, cof_total: Cof_sec_pr) |>
+    tidyr::pivot_longer(
+      cols = cof_total:Cof_sec_pr,
+      names_to = "CofCiclos2",
+      values_to = "racioCof2"
+    )
+
+principaisCiclosFiltrados <- dplyr::filter(principaisCiclos,
+                                           ano == "2017") |>
+  tidyr::replace_na(list(Cof_pe=0))
+
+
+principaisCiclosFiltradosTidy <- principaisCiclosFiltrados |>
+  tidyr::pivot_longer(
+    cols = Cof_pe:Cof_sec,
+    names_to = "ciclos",
+    values_to = "racioCof"
+  )
+# AED - Racio Cofinanciamento/Ciclos Escolares
+
+
+```
+
+### Análise Exploratória: Racio da Pré-Escola, Ciclo Básico e Secundário
+
+A seguir, tem-se a análise das Racio por Ciclos Escolares para os anos escolres de 2017/2018 a 2019/2020. Todos os ciclos apresentam assimentria à negativa (ou à esquerda), o que indica que há uma concentração do racio/ciclo no inicío da dsitribuição , ou seja, a maioria dos Conceolhos recebem Cofinanciamento menor que sua média. (isso pode ser mais explorado)
+  
+
+```{r echo=FALSE, warning=FALSE, fig.show='hold', out.width= "33.3333%"}
+
+principaisCiclos |>
+  dplyr::filter(ano == "2017") |>
+  dplyr::select(-1,-2) |>
+  ggpairs(title = "Ano Escolar 2017/2018")
+
+principaisCiclos |>
+  dplyr::filter(ano == "2018") |>
+  dplyr::select(-1,-2) |>
+  ggpairs(title = "Ano Escolar 2018/2019")
+
+principaisCiclos |>
+  dplyr::filter(ano == "2019") |>
+  dplyr::select(-1,-2) |>
+  ggpairs(title = "Ano Escolar 2019/2020")
+
+```
+
+#### Estatísticas
+
+```{r warning=FALSE, echo=FALSE}
+
+principaisCiclos |> 
+  dplyr::group_by(ano) |> 
+  dplyr::summarise(
+    Mínimo = min(Cof_pe, na.rm=T),
+    Q25 = quantile(Cof_pe, c(0.25), na.rm=T),
+    Média = mean(Cof_pe, na.rm=T),
+    DP = sd(Cof_pe, na.rm=T),
+    Q75 = quantile(Cof_pe, c(0.75), na.rm=T),
+    Média = mean(Cof_pe, na.rm=T),
+    IIQ = Q75-Q25
+  ) |>
+  kbl(caption = "Estatísticas: Cofinanciamento Racio Pré-escola") |> 
+  kable_classic(full_width = F, html_font = "Cambria") 
+  
+principaisCiclos |>  
+dplyr::group_by(ano) |> 
+dplyr::summarise(
+    Mínimo = min(Cof_cb, na.rm=T),
+    Q25 = quantile(Cof_cb, c(0.25), na.rm=T),
+    Média = mean(Cof_cb, na.rm=T),
+    DP = sd(Cof_cb, na.rm=T),
+    Q75 = quantile(Cof_cb, c(0.75), na.rm=T),
+    Média = mean(Cof_cb, na.rm=T),
+    IIQ = Q75-Q25
+  ) |>
+  kbl(caption = "Estatísticas: Cofinanciamento Racio Ciclo Básico") |> 
+  kable_classic(full_width = F, html_font = "Cambria") 
+
+
+principaisCiclos |> 
+  dplyr::group_by(ano) |> 
+  dplyr::summarise(
+    Mínimo = min(Cof_sec, na.rm=T),
+    Q25 = quantile(Cof_sec, c(0.25), na.rm=T),
+    Média = mean(Cof_sec, na.rm=T),
+    DP = sd(Cof_sec, na.rm=T),
+    Q75 = quantile(Cof_sec, c(0.75), na.rm=T),
+    Média = mean(Cof_sec, na.rm=T),
+    IIQ = Q75-Q25
+  ) |>
+  kbl(caption = "Estatísticas: Cofinanciamento Racio Secundário") |> 
+  kable_classic(full_width = F, html_font = "Cambria") 
+
+
+
+```
+
+
+#### Histograma/Densidade
+
+```{r, echo=FALSE, warning=FALSE, fig.show='hold', out.width= "50%"}
+
+principaisCiclosFiltradosTidy %>%
+  ggplot(aes(x = racioCof, fill = ciclos)) +
+  geom_histogram(color = 'white', alpha=0.2) +
+  theme_bw() +
+  labs(x = "Racio Cofinanciamento",
+       y = "Ciclos Escolares")
+
+ principaisCiclosFiltradosTidy %>%
+  ggplot(aes(x = racioCof, fill = ciclos)) +
+  geom_density(color = 'white', alpha=0.2) +
+  theme_bw() +
+  labs(x = "Racio Cofinanciamento",
+       y = "Ciclos Escolares")
+
+
+```
+### Lollipop chart
+
+#### Ano de referência 2017
+
+#
+
+```{r, echo=FALSE, warning=FALSE, fig.show='hold', out.width= "120%"}
+#### Possibilidade 1
+# principaisCiclosFiltradosTidy |> 
+#   dplyr::filter(ano=="2017") |> 
+# ggdotchart(x = "municipio", y = "racioCof",
+#            color = "ciclos",                                # Color by groups
+#            palette = c("#00AFBB", "#E7B800", "#FC4E07"), # Custom color palette
+#            sorting = "ascending",                        # Sort value in descending order
+#            add = "segments",                             # Add segments from y = 0 to dots
+#            ggtheme = theme_pubr(),                        # ggplot2 theme
+#            font.tickslab = c(3)
+# )
+```
+
+##### Dot chart
+
+```{r, echo=FALSE, warning=FALSE, fig.show='hold', out.width= "200%"}
+
+principaisCiclosFiltradosTidy |> 
+  dplyr::filter(ano=="2017",
+                ciclos=="Cof_pe") |> 
+  ggdotchart(x = "municipio", y = "racioCof",                 # Color by groups
+             palette = c("#00AFBB", "#E7B800", "#FC4E07"), # Custom color palette
+             sorting = "ascending",                        # Sort value in descending order
+             add = "segments",                             # Add segments from y = 0 to dots
+             ggtheme = theme_bw(),                        # ggplot2 theme
+             rotate = TRUE,
+             dot.size = 0.4,
+             font.tickslab = c(4)
+  )
+
+principaisCiclosFiltradosTidy |> 
+  dplyr::filter(ano=="2018",
+                ciclos=="Cof_pe") |> 
+  ggdotchart(x = "municipio", y = "racioCof",                 # Color by groups
+             palette = c("#00AFBB", "#E7B800", "#FC4E07"), # Custom color palette
+             sorting = "ascending",                        # Sort value in descending order
+             add = "segments",                             # Add segments from y = 0 to dots
+             ggtheme = theme_bw(),                        # ggplot2 theme
+             rotate = TRUE,
+             dot.size = 0.4,
+             font.tickslab = c(4)
+  )
+
+# 2019
+
+principaisCiclosFiltradosTidy |> 
+  dplyr::filter(ano=="2019",
+                ciclos=="Cof_pe") |> 
+  ggdotchart(x = "municipio", y = "racioCof",                 # Color by groups
+             palette = c("#00AFBB", "#E7B800", "#FC4E07"), # Custom color palette
+             sorting = "ascending",                        # Sort value in descending order
+             add = "segments",                             # Add segments from y = 0 to dots
+             ggtheme = theme_bw(),                        # ggplot2 theme
+             rotate = TRUE,
+             dot.size = 0.4,
+             font.tickslab = c(4)
+  )
+
+```
+
